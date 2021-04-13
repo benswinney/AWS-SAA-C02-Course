@@ -37,13 +37,14 @@ standard protocols and methods.
 4. Rapid Elasticity: Scale up and down automatically in response to system load.
 5. Measured Service: Usage is measured. Pay only for what you consume.
 
-### 1.1.1. Public vs Private vs Multi Cloud
+### 1.1.1. Public vs Private vs Multi-Cloud vs Hybrid Cloud vs Hybrid-Multi-Cloud
 
 - Public Cloud: using 1 public cloud such as AWS, Azure, Google Cloud.
 - Private Cloud: using on-premises real cloud. Must meet 5 requirements.
 - Multi-Cloud: using more than 1 public cloud in one deployment.
 - Hybrid Cloud: using public and private clouds in one environment
   - This is **NOT** using Public Cloud and Legacy on-premises hardware.
+- Hybrid-Multi-Cloud: using a combination of Hybrid and Multi-Cloud.
 
 ### 1.1.2. Cloud Service Models
 
@@ -82,7 +83,6 @@ There are additional services such as *Function as a Service*,
 
 ### 1.2.1. Public vs Private Services
 
-
 Refers to the networking only, not permissions.
 
 - Public Internet: AWS is a public cloud platform and connected to the public
@@ -112,6 +112,7 @@ Areas such as countries or states
 - Beijing
 - London
 - Paris
+- Sydney
 
 AWS can only deploy regions as fast as their planning allows.
 Regions are often not near their customers.
@@ -201,14 +202,15 @@ The unit of consumption is an instance.
 An EC2 instance is configured to launch into a single VPC subnet.
 Private service by default, public access must be configured.
 The VPC needs to support public access. If you use a custom VPC then you must
-handle the networking on your own.
+handle the networking on your own. VPC Wizard can configure networking for you,
+including configuring VPN access with Public and Private subnets.
 
 EC2 deploys into one AZ. If it fails, the instance fails.
 
 Different sizes and capabilities. All use On-Demand Billing - Per second.
 Only pay for what you consume.
 
-Local on-host storage or **Elastic Block Storage**
+Local on-host storage (Instance Store [Temporary]) or **Elastic Block Storage**
 
 Pricing based on:
 
@@ -1526,6 +1528,10 @@ place to store the output from another data set.
 - 3+ AZ replication
 - 40KB minimum object capacity charge
 - 90 days minimum storage duration charge.
+- Automatically encrypts data at rest with AES 256-bit symmetric keys
+- Glacier Vault
+  - Vault Lock policy to enforce compliance controls
+  - Controls such as Write Once Read Many - (WORM)
 
 Retrieval methods:
 
@@ -2137,6 +2143,17 @@ bandwidth.
 NATGW cannot do port forwarding or be a bastion server. In that case it might
 be necessary to run a NAT EC2 instance instead.
 
+## 1.5.9 VPC Connection Modes
+
+### 1.5.9.1 VPC Sharing
+
+VPC sharing (part of Resource Access Manager) allows multiple AWS accounts to create their application resources such as EC2 instances, RDS databases, Redshift clusters, and Lambda functions, into shared and centrally-managed Amazon Virtual Private Clouds (VPCs). To set this up, the account that owns the VPC (owner) shares one or more subnets with other accounts (participants) that belong to the same organization from AWS Organizations. After a subnet is shared, the participants can view, create, modify, and delete their application resources in the subnets shared with them. Participants cannot view, modify, or delete resources that belong to other participants or the VPC owner.
+You can share Amazon VPCs to leverage the implicit routing within a VPC for applications that require a high degree of interconnectivity and are within the same trust boundaries. This reduces the number of VPCs that you create and manage while using separate accounts for billing and access control.
+
+### 1.5.9.2 VPC Peering
+
+A VPC peering connection is a networking connection between two VPCs that enables you to route traffic between them using private IPv4 addresses or IPv6 addresses. Instances in either VPC can communicate with each other as if they are within the same network. VPC peering does not facilitate centrally managed VPCs. 
+
 ---
 
 ## 1.6. Elastic-Cloud-Compute-EC2
@@ -2207,9 +2224,9 @@ Tenancy:
 - **Shared** - Instances are run on shared hardware, but isolated from other customers.
 - **Dedicated** - Instances are run on hardware that's dedicates to a single customer.
   Dedicated instances may share hardware with other instances from the same AWS account
-  that are not Dedicated instances.
+  that are not Dedicated instances. Can **not** be used for server-bound licenses
 - **Dedicated host** - Instances are run on a physical server fully dedicated for your use.
-  Pay for entire host, don't pay for instances.
+  Pay for entire host, don't pay for instances. Can be used for server-bound licenses
 
 - AZ resilient service. They run within only one AZ system.
   - You can't access them cross zone.
@@ -2345,6 +2362,7 @@ size increases.
   - T-put optimized HDD (st1)
     - maximum t-put for logs or media storage
   - Cold HDD (sc1)
+- Can be used with RAID (if supported by the OS)
 
 #### 1.6.5.1. General Purpose SSD (gp2)
 
@@ -2748,6 +2766,8 @@ Autorecovery can kick in and help,
 
 - Recover this instance
   - can be a number of steps depending on the failure
+  - Will retain Instance ID, metadata, Private IP, Elastic IP and Public IP (if assigned one)
+  - Instance is migrated during reboot and in-memory data is lost
 - Stop this instance
 - Terminate this instance
   - useful in a cluster
@@ -4188,6 +4208,10 @@ This could cause backend unevenness because one user will always be forced
 to the same server no matter what the distributed load is. Applications
 should be designed to hold session stickiness somewhere other than EC2. You can hold session state in, for instance, DynamoDB. If store session state data externally, this means EC2 instances will be completely stateless.
 
+#### 1.12.6.5 Connection Draining
+
+To ensure that an ELB stops sending requests to instances that are de-registering or unhealthy while keeping the existing connections open, use connection draining. This enables the load balancer to complete in-flight requests made to instances that are de-registering or unhealthy. The maximum timeout value can be set between 1 and 3,600 seconds (the default is 300 seconds). When the maximum time limit is reached, the load balancer forcibly closes connections to the de-registering instance.
+
 ---
 
 ## 1.13. Serverless-and-App-Services
@@ -4580,7 +4604,7 @@ that can be ingested during a 24 hour period. However much you ingest during
 **Kinesis data records (1MB)** are stored across shards and are the blocks
 of data for a stream.
 
-**Kinesis Data Firehose** connects to a Kinesis stream. It can move the data from a stream onto S3 or another service. Kinesis Firehose allows for the long term persistence of storage of kinesis data into services like S3. 
+**Kinesis Data Firehose** connects to a Kinesis stream. It can move the data from a stream onto S3, RedShift, Elasticsearch & Splunk (Not EMR). Kinesis Firehose allows for the long term persistence of storage of kinesis data into services like S3. 
 
 ### 1.13.10. SQS vs Kinesis
 
@@ -5043,7 +5067,7 @@ One common directory is **Active Directory** by Microsoft and its full name is
 #### 1.16.6.1. Directory Modes
 
 - **Simple AD**: should be default. Designed for simple requirements.
-- **Microsoft AD**: is anything with Windows or if it needs a trust relationship
+- **AWS Managed Microsoft AD**: is anything with Windows or if it needs a trust relationship
 with on-prem. This is not an emulation or adjusted by AWS.
 - **AD Connector**: Use AWS services without storing any directory info in the
 cloud, it proxies to your on-prem directory.
